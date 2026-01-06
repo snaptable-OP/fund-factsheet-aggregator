@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Fund Factsheet Aggregator
 
-## Getting Started
+A comprehensive web application for aggregating and comparing fund factsheet data including returns, asset allocation, and holdings.
 
-First, run the development server:
+## Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 📊 **Comprehensive Fund Data Dashboard**
+  - Fund name, launch date, and investment objective
+  - Annualized returns (1 year, 3 year, 5 year, since launch)
+  - Calendar year returns (2022, 2023, 2024)
+  - Asset classes with allocation percentages
+  - Top 10 holdings with allocation percentages
+
+- 📤 **Image Upload & Processing**
+  - Drag-and-drop or click to upload factsheet images
+  - Automatic data extraction via parser API
+  - Storage in Supabase
+
+- 📈 **Data Comparison**
+  - Side-by-side fund comparison
+  - Sortable by name, launch date, or factsheet date
+  - Export to Excel functionality
+
+- 🎨 **Modern UI**
+  - Responsive design
+  - Dark mode support
+  - Clean, professional interface
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes
+- **Database**: Supabase (PostgreSQL)
+- **Storage**: Supabase Storage
+- **Deployment**: Vercel
+
+## Quick Start
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/fund-factsheet-aggregator.git
+   cd fund-factsheet-aggregator
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Set up environment variables**
+   ```bash
+   cp .env.local.example .env.local
+   # Edit .env.local with your credentials
+   ```
+
+4. **Run development server**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open in browser**
+   ```
+   http://localhost:3000
+   ```
+
+## Setup Guide
+
+For detailed setup instructions, see [SETUP_GUIDE.md](./SETUP_GUIDE.md)
+
+## Project Structure
+
+```
+fund-factsheet-aggregator/
+├── app/
+│   ├── api/
+│   │   └── process-factsheets/    # API route for processing factsheets
+│   ├── globals.css                 # Global styles
+│   └── page.tsx                    # Main page
+├── components/
+│   └── funds/
+│       ├── file-upload.tsx         # File upload component
+│       ├── funds-dashboard.tsx      # Dashboard component
+│       └── processing-status.tsx   # Status indicator
+├── lib/
+│   └── supabase/
+│       ├── client.ts              # Client-side Supabase
+│       └── server.ts               # Server-side Supabase
+├── supabase/
+│   ├── schema.sql                  # Database schema
+│   └── storage-policies.sql        # Storage policies
+├── types/
+│   └── fund.ts                    # TypeScript types
+└── SETUP_GUIDE.md                 # Complete setup guide
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Data Schema
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+The application expects the following data structure from the parser API:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Fund identification: name, launch date, factsheet date, investment objective
+- Returns: 1/3/5 year annualized, since launch, calendar years 2022-2024
+- Asset classes: array of class names and allocation percentages
+- Holdings: top 10 holdings with names and allocation percentages
 
-## Learn More
+See `types/fund.ts` for the complete TypeScript interface.
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT
