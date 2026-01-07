@@ -4,6 +4,7 @@ export interface ParserAPIResponse {
   fund_factsheet_as_of_date: string
   fund_launch_date: string
   investment_objectives: string
+  risk_class: string | null
   '2022_calendar_year_return': number | null
   '2023_calendar_year_return': number | null
   '2024_calendar_year_return': number | null
@@ -33,6 +34,7 @@ export interface FundData {
   fund_factsheet_as_of_date: string
   launchDate: string
   investmentObjective: string
+  riskLevel: string | null
   returns: {
     oneYearAnnualized: number | null
     threeYearAnnualized: number | null
