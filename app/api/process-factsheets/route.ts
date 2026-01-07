@@ -508,8 +508,8 @@ async function processPDF(file: File, supabase: any): Promise<{ funds: FundData[
   return { funds: fundDataArray, pdfUrl }
 }
 
-// Increase timeout for this route (30 minutes for large PDFs with many funds)
-export const maxDuration = 1800 // 30 minutes in seconds (increased from 15 minutes)
+// Increase timeout for this route (max 800 seconds for Vercel pro plan)
+export const maxDuration = 800 // 13.33 minutes in seconds (Vercel pro plan maximum)
 
 export async function POST(request: NextRequest) {
   try {
