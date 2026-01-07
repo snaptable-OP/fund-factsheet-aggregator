@@ -25,6 +25,9 @@ async function uploadPDFToSupabase(file: File, supabase: any): Promise<string> {
 
   if (error) {
     console.error('Supabase upload error:', error)
+    if (error.message?.includes('Bucket not found') || error.message?.includes('bucket')) {
+      throw new Error(`Failed to upload PDF: Storage bucket 'factsheet-pdfs' not found. Please create it in Supabase Dashboard → Storage → New bucket (name: factsheet-pdfs, set as Public).`)
+    }
     throw new Error(`Failed to upload PDF: ${error.message}`)
   }
 
