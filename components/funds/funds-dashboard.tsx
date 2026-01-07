@@ -195,14 +195,14 @@ function FundDataBox({
     }
     
     // Word-based similarity (for "Equities - US" vs "Equities US")
-    const words1 = normalized1.split(/\s+/).filter(w => w.length > 0)
-    const words2 = normalized2.split(/\s+/).filter(w => w.length > 0)
+    const words1 = normalized1.split(/\s+/).filter((w: string) => w.length > 0)
+    const words2 = normalized2.split(/\s+/).filter((w: string) => w.length > 0)
     
     if (words1.length > 0 && words2.length > 0) {
-      const set1 = new Set(words1)
-      const set2 = new Set(words2)
-      const intersection = new Set([...set1].filter(x => set2.has(x)))
-      const union = new Set([...set1, ...set2])
+      const set1 = new Set<string>(words1)
+      const set2 = new Set<string>(words2)
+      const intersection = new Set(Array.from(set1).filter((x: string) => set2.has(x)))
+      const union = new Set([...Array.from(set1), ...Array.from(set2)])
       const similarity = intersection.size / union.size
       
       // If most words match, consider them similar
@@ -210,8 +210,8 @@ function FundDataBox({
       
       // If all words from shorter string are in longer string, consider it a match
       const shorterWords = words1.length <= words2.length ? words1 : words2
-      const longerSet = words1.length > words2.length ? new Set(words1) : new Set(words2)
-      if (shorterWords.length > 0 && shorterWords.every(w => longerSet.has(w))) return true
+      const longerSet = words1.length > words2.length ? new Set<string>(words1) : new Set<string>(words2)
+      if (shorterWords.length > 0 && shorterWords.every((w: string) => longerSet.has(w))) return true
     }
     
     return false
