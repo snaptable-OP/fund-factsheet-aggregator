@@ -2165,7 +2165,7 @@ export function FundsDashboard({ funds, verificationData, onUpdateGroundTruth, o
     }
   }
 
-  const handleCalculateF1 = () => {
+  const handleCalculateF1 = async () => {
     // Check if verification is still in progress
     if (verificationData?.isVerifying || verificationData?.isVerifyingThirdRun) {
       alert('Please wait for the 2nd and 3rd run verification to complete before calculating F1 scores. The results are not ready yet.')
@@ -2198,6 +2198,31 @@ export function FundsDashboard({ funds, verificationData, onUpdateGroundTruth, o
       thirdRun: thirdRunF1,
       aiGuidedAdjustments: aiGuidedAdjustmentsF1
     })
+
+    // Save accuracy rates (F1 scores) to database
+    if (groundTruth.length > 0) {
+      const sourceFile = groundTruth[0]?.sourceFile || funds[0]?.sourceFile || verificationData?.firstRun?.[0]?.sourceFile || 'unknown'
+      
+      // Save rates for each fund in ground truth
+      for (const fund of groundTruth) {
+        try {
+          await fetch('/api/save-rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fundName: fund.fundName,
+              sourceFile,
+              accuracyRateFirstRun: firstRunF1?.f1 ?? null,
+              accuracyRateSecondRun: secondRunF1?.f1 ?? null,
+              accuracyRateThirdRun: thirdRunF1?.f1 ?? null,
+              accuracyRateAiGuidedAdjustments: aiGuidedAdjustmentsF1?.f1 ?? null
+            })
+          })
+        } catch (error) {
+          console.error(`Failed to save accuracy rates for ${fund.fundName}:`, error)
+        }
+      }
+    }
   }
 
   // Normalize text for comparison (remove Chinese characters, normalize whitespace)
@@ -2582,7 +2607,7 @@ export function FundsDashboard({ funds, verificationData, onUpdateGroundTruth, o
     }
   }
 
-  const handleCalculateConsistencyRate = () => {
+  const handleCalculateConsistencyRate = async () => {
     // Check if verification is still in progress
     if (verificationData?.isVerifying || verificationData?.isVerifyingThirdRun) {
       alert('Please wait for the 2nd and 3rd run verification to complete before calculating consistency rate. The results are not ready yet.')
@@ -2615,6 +2640,31 @@ export function FundsDashboard({ funds, verificationData, onUpdateGroundTruth, o
       secondRun: secondRunRate,
       thirdRun: thirdRunRate
     })
+
+    // Save consistency rates to database
+    if (funds.length > 0 || verificationData?.firstRun?.length > 0) {
+      const sourceFile = funds[0]?.sourceFile || verificationData?.firstRun?.[0]?.sourceFile || 'unknown'
+      
+      // Save rates for each fund
+      const fundNames = funds.length > 0 ? funds.map(f => f.fundName) : (verificationData?.firstRun?.map(f => f.fundName) || [])
+      
+      for (const fundName of fundNames) {
+        try {
+          await fetch('/api/save-rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fundName,
+              sourceFile,
+              consistencyRateSecondRun: secondRunRate?.accuracy ?? null,
+              consistencyRateThirdRun: thirdRunRate?.accuracy ?? null
+            })
+          })
+        } catch (error) {
+          console.error(`Failed to save consistency rates for ${fundName}:`, error)
+        }
+      }
+    }
   }
 
   const exportToExcel = () => {

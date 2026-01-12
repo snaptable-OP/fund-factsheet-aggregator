@@ -446,6 +446,200 @@ function mapParserResponseToFundDataArray(
 }
 
 /**
+ * Reverse map FundData back to original API response format
+ * This converts the mapped FundData structure back to the ParserAPIResponse format
+ */
+function reverseMapFundDataToAPIFormat(fundData: FundData): any {
+  // Convert date from YYYY-MM-DD back to original format (or keep as is)
+  const formatDate = (dateString: string | null | undefined): string | null => {
+    if (!dateString) return null
+    // Keep as YYYY-MM-DD or convert back if needed
+    return dateString
+  }
+
+  // Reconstruct the arrays for holdings and asset classes
+  const top10HoldingsNames: string[] = fundData.top10Holdings.map(h => h.name)
+  const top10HoldingsPercentages: number[] = fundData.top10Holdings.map(h => h.allocationPercent)
+  const assetClassNames: string[] = fundData.assetClasses.map(ac => ac.class)
+  const assetClassPercentages: number[] = fundData.assetClasses.map(ac => ac.allocationPercent)
+
+  // Reconstruct the original API response format
+  const apiFormat: any = {
+    fund_name: fundData.fundName,
+    fund_factsheet_as_of_date: formatDate(fundData.fund_factsheet_as_of_date),
+    fund_launch_date: formatDate(fundData.launchDate),
+    investment_objectives: fundData.investmentObjective || '',
+    risk_class: fundData.riskLevel,
+    '2022_calendar_year_return': fundData.returns.calendarYear2022,
+    '2023_calendar_year_return': fundData.returns.calendarYear2023,
+    '2024_calendar_year_return': fundData.returns.calendarYear2024,
+    '1_year_performance_annualized': fundData.returns.oneYearAnnualized,
+    '3_year_performance_annualized': fundData.returns.threeYearAnnualized,
+    '5_year_performance_annualized': fundData.returns.fiveYearAnnualized,
+    since_launch_performance_annualized: fundData.returns.sinceLaunchAnnualized,
+    top_10_holdings_names_in_descending_order: top10HoldingsNames,
+    top_10_holdings_percentages_in_descending_order: top10HoldingsPercentages,
+    asset_classes_invested_in_descending_order: assetClassNames,
+    asset_allocation_percentages_in_descending_order: assetClassPercentages,
+  }
+
+  return apiFormat
+}
+
+/**
+ * Extract original fund objects array from parser response
+ * This is a helper to get the original API response format
+ */
+function extractOriginalFundObjects(parserResponse: any): any[] {
+  if (!parserResponse) {
+    throw new Error('Parser API returned empty response')
+  }
+
+  // Handle different possible response structures (same logic as mapParserResponseToFundDataArray)
+  if (parserResponse.result && parserResponse.result.fund_data && Array.isArray(parserResponse.result.fund_data)) {
+    return parserResponse.result.fund_data
+  } else if (parserResponse.funds && Array.isArray(parserResponse.funds)) {
+    return parserResponse.funds
+  } else if (Array.isArray(parserResponse)) {
+    return parserResponse
+  } else if (parserResponse.data && Array.isArray(parserResponse.data)) {
+    return parserResponse.data
+  } else if (parserResponse.result && Array.isArray(parserResponse.result)) {
+    return parserResponse.result
+  } else if (typeof parserResponse === 'object') {
+    return [parserResponse]
+  } else {
+    throw new Error('Parser API returned invalid response format - expected array of fund objects')
+  }
+}
+
+/**
+ * Map parser API response and extract original fund objects
+ * Returns both mapped FundData array and original fund objects array
+ */
+function mapParserResponseToFundDataArrayWithOriginals(
+  parserResponse: any,
+  sourceFile: string,
+  pdfUrl: string
+): { mappedFunds: FundData[], originalFunds: any[] } {
+  const originalFunds = extractOriginalFundObjects(parserResponse)
+  const mappedFunds = mapParserResponseToFundDataArray(parserResponse, sourceFile, pdfUrl)
+  return { mappedFunds, originalFunds }
+}
+
+/**
+ * Track file upload and run completion timestamps
+ */
+async function trackFileUploadTimestamps(
+  fundName: string,
+  sourceFile: string,
+  supabase: any,
+  fileUploadedAt?: string,
+  firstRunCompletedAt?: string,
+  firstRunData?: any | null,
+  secondRunCompletedAt?: string,
+  secondRunData?: any | null,
+  thirdRunCompletedAt?: string,
+  thirdRunData?: any | null,
+  aiGuidedAdjustmentsSavedAt?: string,
+  aiGuidedAdjustmentsData?: any | null,
+  groundTruthSavedAt?: string,
+  groundTruthData?: any | null,
+  consistencyRate?: { secondRun?: { accuracy: number; totalFields: number; differences: number } | null; thirdRun?: { accuracy: number; totalFields: number; differences: number } | null } | null,
+  accuracyRate?: { firstRun?: { precision: number; recall: number; f1: number } | null; secondRun?: { precision: number; recall: number; f1: number } | null; thirdRun?: { precision: number; recall: number; f1: number } | null; aiGuidedAdjustments?: { precision: number; recall: number; f1: number } | null } | null
+): Promise<void> {
+  try {
+    const normalizedFundName = normalizeFundNameForDatabase(fundName)
+    
+    // Build parameters object - only include non-undefined values
+    const params: any = {
+      p_fund_name: normalizedFundName,
+      p_source_file: sourceFile
+    }
+    
+    // Only add file_uploaded_at if explicitly provided (for new uploads)
+    // If not provided, the function will find and update the most recent row
+    if (fileUploadedAt !== undefined) {
+      params.p_file_uploaded_at = fileUploadedAt
+    }
+    // Don't set a default - let the function handle updates vs inserts
+    
+    if (firstRunCompletedAt !== undefined) {
+      params.p_first_run_completed_at = firstRunCompletedAt
+    }
+    if (firstRunData !== undefined && firstRunData !== null) {
+      params.p_first_run_data = firstRunData
+    }
+    
+    if (secondRunCompletedAt !== undefined) {
+      params.p_second_run_completed_at = secondRunCompletedAt
+    }
+    if (secondRunData !== undefined && secondRunData !== null) {
+      params.p_second_run_data = secondRunData
+    }
+    
+    if (thirdRunCompletedAt !== undefined) {
+      params.p_third_run_completed_at = thirdRunCompletedAt
+    }
+    if (thirdRunData !== undefined && thirdRunData !== null) {
+      params.p_third_run_data = thirdRunData
+    }
+    
+    if (aiGuidedAdjustmentsSavedAt !== undefined) {
+      params.p_ai_guided_adjustments_saved_at = aiGuidedAdjustmentsSavedAt
+    }
+    if (aiGuidedAdjustmentsData !== undefined && aiGuidedAdjustmentsData !== null) {
+      params.p_ai_guided_adjustments_data = aiGuidedAdjustmentsData
+    }
+    
+    if (groundTruthSavedAt !== undefined) {
+      params.p_ground_truth_saved_at = groundTruthSavedAt
+    }
+    if (groundTruthData !== undefined && groundTruthData !== null) {
+      params.p_ground_truth_data = groundTruthData
+    }
+    
+    // Note: consistencyRate and accuracyRate are now stored in separate columns
+    // They should be saved via the /api/save-rates endpoint
+    
+    console.log(`Tracking file upload timestamps for ${fundName} from ${sourceFile}`, {
+      normalizedFundName,
+      sourceFile,
+      fileUploadedAt: params.p_file_uploaded_at || 'not set (will update)',
+      firstRunCompletedAt: params.p_first_run_completed_at || 'not set',
+      secondRunCompletedAt: params.p_second_run_completed_at || 'not set',
+      thirdRunCompletedAt: params.p_third_run_completed_at || 'not set',
+      hasFirstRunData: !!params.p_first_run_data,
+      hasSecondRunData: !!params.p_second_run_data,
+      hasThirdRunData: !!params.p_third_run_data
+    })
+    
+    const { data, error } = await supabase.rpc('upsert_file_upload_tracking', params)
+
+    if (error) {
+      console.error(`Failed to track file upload timestamps for ${fundName}:`, {
+        error: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+        params
+      })
+      // Don't throw - tracking is non-critical
+    } else {
+      console.log(`Successfully tracked file upload timestamps for ${fundName} from ${sourceFile}`, data)
+    }
+  } catch (error: any) {
+    console.error(`Error tracking file upload timestamps for ${fundName}:`, {
+      message: error.message,
+      stack: error.stack,
+      fundName,
+      sourceFile
+    })
+    // Don't throw - tracking is non-critical
+  }
+}
+
+/**
  * Store fund data in Supabase database using normalized schema
  */
 async function storeFundData(fundData: FundData, pdfUrl: string, supabase: any, runType: 'first_run' | 'second_run' | 'third_run' | 'ai_guided_adjustments' | 'ground_truth' = 'first_run'): Promise<void> {
@@ -498,14 +692,38 @@ async function processPDF(file: File, supabase: any): Promise<{ funds: FundData[
   const parserResponse = await parsePDFWithAPI(pdfUrl)
   console.log(`Parser response received`)
 
-  // Step 3: Map parser response (array of fund objects) to FundData array
-  const fundDataArray = mapParserResponseToFundDataArray(parserResponse, file.name, pdfUrl)
+  // Step 3: Map parser response (array of fund objects) to FundData array and extract originals
+  const { mappedFunds: fundDataArray, originalFunds: originalFundObjects } = mapParserResponseToFundDataArrayWithOriginals(parserResponse, file.name, pdfUrl)
   console.log(`Mapped ${fundDataArray.length} fund(s) from PDF`)
 
   // Step 4: Store each fund in Supabase database (first run)
-  for (const fundData of fundDataArray) {
+  const fileUploadedAt = new Date().toISOString()
+  const firstRunCompletedAt = new Date().toISOString()
+  
+  for (let i = 0; i < fundDataArray.length; i++) {
+    const fundData = fundDataArray[i]
+    const originalFundObject = originalFundObjects[i]
+    
     await storeFundData(fundData, pdfUrl, supabase, 'first_run')
     console.log(`Fund "${fundData.fundName}" stored in database (first_run)`)
+    
+    // First, create the initial upload record (just file_uploaded_at)
+    await trackFileUploadTimestamps(
+      fundData.fundName,
+      file.name,
+      supabase,
+      fileUploadedAt // This creates a new row
+    )
+    
+    // Then, update that row with first run data in original API format (don't pass fileUploadedAt so it updates)
+    await trackFileUploadTimestamps(
+      fundData.fundName,
+      file.name,
+      supabase,
+      undefined, // Don't pass fileUploadedAt - this will update the most recent row
+      firstRunCompletedAt,
+      originalFundObject // Save original API response format, not mapped FundData
+    )
   }
 
   return { funds: fundDataArray, pdfUrl }
@@ -571,15 +789,48 @@ export async function POST(request: NextRequest) {
         // Re-process the PDF URL without uploading again
         try {
           const parserResponse = await parsePDFWithAPI(body.pdfUrl)
-          const fundDataArray = mapParserResponseToFundDataArray(parserResponse, body.sourceFile || 'verification', body.pdfUrl)
+          const { mappedFunds: fundDataArray, originalFunds: originalFundObjects } = mapParserResponseToFundDataArrayWithOriginals(parserResponse, body.sourceFile || 'verification', body.pdfUrl)
           
           // Store run data in normalized Supabase database
           console.log(`Storing ${fundDataArray.length} fund(s) from ${runType} in database`)
           const storageErrors: string[] = []
-          for (const fundData of fundDataArray) {
+          const runCompletedAt = new Date().toISOString()
+          const sourceFile = body.sourceFile || 'verification'
+          
+          for (let i = 0; i < fundDataArray.length; i++) {
+            const fundData = fundDataArray[i]
+            const originalFundObject = originalFundObjects[i]
+            
             try {
               await storeFundData(fundData, body.pdfUrl, supabase, runType as 'second_run' | 'third_run')
               console.log(`Successfully stored ${runType} data for ${fundData.fundName}`)
+              
+              // Track run completion timestamp with original API response data
+              if (runType === 'second_run') {
+                await trackFileUploadTimestamps(
+                  fundData.fundName,
+                  sourceFile,
+                  supabase,
+                  undefined, // Don't update file_uploaded_at
+                  undefined, // Don't update first_run_completed_at
+                  undefined, // Don't update first_run_data
+                  runCompletedAt, // Update second_run_completed_at
+                  originalFundObject // Save original API response format
+                )
+              } else if (runType === 'third_run') {
+                await trackFileUploadTimestamps(
+                  fundData.fundName,
+                  sourceFile,
+                  supabase,
+                  undefined, // Don't update file_uploaded_at
+                  undefined, // Don't update first_run_completed_at
+                  undefined, // Don't update first_run_data
+                  undefined, // Don't update second_run_completed_at
+                  undefined, // Don't update second_run_data
+                  runCompletedAt, // Update third_run_completed_at
+                  originalFundObject // Save original API response format
+                )
+              }
             } catch (error: any) {
               const errorMsg = `Error storing ${runType} data for ${fundData.fundName}: ${error.message || error}`
               console.error(errorMsg)
